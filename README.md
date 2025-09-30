@@ -57,6 +57,16 @@ After the containers are running you can confirm the MVP is healthy:
   ```
   to validate the example connector configuration without executing a pipeline.
 
-The web dashboard automatically reads from `NEXT_PUBLIC_API_URL` and renders the list of connectors exposed by the API.
+The web dashboard automatically reads from `NEXT_PUBLIC_API_URL` and renders the list of connectors exposed by the API. If the
+variable is unset or the registry cannot be reached, the dashboard now falls back to a curated offline catalogue so local
+development continues to work without noisy connection errors.
+
+### Testing
+
+Run the frontend test suite (unit and integration coverage for the dashboard loader and page) with:
+
+```bash
+pnpm --filter openfuse-web test
+```
 
 See the [`docs/architecture/overview.md`](docs/architecture/overview.md) document for more information about the platform layout and extensibility model.

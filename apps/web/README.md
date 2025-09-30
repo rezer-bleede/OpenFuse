@@ -1,12 +1,13 @@
 # OpenFuse Web Dashboard
 
-The web dashboard provides observability and configuration tooling for OpenFuse operators. It is built with Next.js (App Router) and Tailwind-inspired utility classes for rapid iteration. The landing page hydrates itself with live data from the API by calling the connector registry endpoint exposed at `${NEXT_PUBLIC_API_URL}/api/v1/connectors`.
+The web dashboard provides observability and configuration tooling for OpenFuse operators. It is built with Next.js (App Router) and Tailwind-inspired utility classes for rapid iteration. The landing page hydrates itself with live data from the API by calling the connector registry endpoint exposed at `${NEXT_PUBLIC_API_URL}/api/v1/connectors`. When the API is unavailable or the environment variable is not set, the dashboard falls back to a bundled catalogue of featured connectors so development environments stay informative.
 
 ## Commands
 
 ```bash
 pnpm install
 pnpm dev
+pnpm test
 ```
 
 You can also use `npm` or `yarn`, but `pnpm` is recommended for workspace compatibility.
@@ -19,8 +20,10 @@ You can also use `npm` or `yarn`, but `pnpm` is recommended for workspace compat
 
 ## Environment variables
 
-Create an `.env.local` file with the following defaults:
+Create an `.env.local` file with the following defaults. Leaving the variable undefined disables remote fetching and uses the
+local connector catalogue:
 
 ```
+# Optional: point to a running API registry
 NEXT_PUBLIC_API_URL=http://localhost:8000
 ```

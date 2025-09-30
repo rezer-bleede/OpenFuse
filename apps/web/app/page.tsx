@@ -1,34 +1,7 @@
-type Connector = {
-  name: string;
-  title: string;
-  description: string;
-  tags: string[];
-};
-
-async function fetchConnectors(): Promise<Connector[]> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
-  try {
-    const response = await fetch(`${apiUrl}/api/v1/connectors`, {
-      // Disable Next.js caching so the dashboard always reflects the latest registry state.
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      console.error("Failed to load connector metadata", await response.text());
-      return [];
-    }
-
-    const payload = (await response.json()) as { connectors?: Connector[] };
-    return payload.connectors ?? [];
-  } catch (error) {
-    console.error("Unable to reach API", error);
-    return [];
-  }
-}
+import { loadConnectors } from "./lib/connectors";
 
 export default async function HomePage() {
-  const connectors = await fetchConnectors();
+  const connectors = await loadConnectors();
 
   return (
     <section className="space-y-8">
@@ -36,7 +9,8 @@ export default async function HomePage() {
         <h2 className="text-2xl font-bold">Build once, deliver everywhere.</h2>
         <p className="text-slate-300">
           OpenFuse unifies your integration workflows with an open-core foundation and optional enterprise extensions for
-          regulated industries. Start with the community edition and layer commercial offerings without forking the codebase.
+          regulated industries. Start with the community edition and layer commercial offerings without forking the
+          codebase.
         </p>
       </div>
 

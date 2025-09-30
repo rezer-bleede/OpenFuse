@@ -31,10 +31,32 @@ Each area is designed for isolation and scalability so the community edition and
    ```bash
    make install
    ```
-2. Start the local development environment:
+2. Copy the example environment file for the API service (Docker uses this file directly):
+   ```bash
+   cp apps/api/.env.example apps/api/.env
+   ```
+3. Start the local development environment:
    ```bash
    docker compose -f infra/docker/docker-compose.yml up --build
    ```
-3. Visit http://localhost:3000 to access the OpenFuse dashboard and http://localhost:8000/docs for the API explorer.
+4. Visit http://localhost:3000 to access the OpenFuse dashboard and http://localhost:8000/docs for the API explorer.
+
+### Smoke testing the stack
+
+After the containers are running you can confirm the MVP is healthy:
+
+- `GET http://localhost:8000/api/v1/health` returns the API liveness probe.
+- `GET http://localhost:8000/api/v1/connectors` lists every connector registered in the service registry.
+- Use `POST http://localhost:8000/api/v1/connectors/example/validate` with a JSON payload such as
+  ```json
+  {
+    "config": {
+      "endpoint": "https://api.example.com"
+    }
+  }
+  ```
+  to validate the example connector configuration without executing a pipeline.
+
+The web dashboard automatically reads from `NEXT_PUBLIC_API_URL` and renders the list of connectors exposed by the API.
 
 See the [`docs/architecture/overview.md`](docs/architecture/overview.md) document for more information about the platform layout and extensibility model.

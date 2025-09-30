@@ -1,15 +1,29 @@
-"""Base connector contracts."""
+"""Base connector contracts and in-memory registry implementation."""
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, ClassVar
 
 
 class Connector(ABC):
     """Abstract base class for data connectors."""
 
-    name: str
+    #: Machine-friendly identifier for the connector. Must be unique.
+    name: ClassVar[str]
+    #: Human-friendly title that can be rendered in UIs.
+    title: ClassVar[str]
+    #: Short description summarising what the connector does.
+    description: ClassVar[str] = ""
+    #: Optional tags used for categorisation in dashboards.
+    tags: ClassVar[list[str]] = []
+    #: JSON-serialisable schema describing the expected configuration payload.
+    config_schema: ClassVar[dict[str, Any]] = {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": True,
+    }
 
     def __init__(self, **config: Any) -> None:
         self.config = config
@@ -22,6 +36,29 @@ class Connector(ABC):
     async def run(self) -> None:
         """Execute the connector pipeline."""
 
+    @classmethod
+    def to_definition(cls) -> "ConnectorDefinition":
+        """Return a definition object that can be serialised via the API."""
+
+        return ConnectorDefinition(
+            name=cls.name,
+            title=cls.title,
+            description=cls.description,
+            tags=list(cls.tags),
+            config_schema=cls.config_schema,
+        )
+
+
+@dataclass(slots=True)
+class ConnectorDefinition:
+    """Serializable metadata about a connector implementation."""
+
+    name: str
+    title: str
+    description: str
+    tags: list[str]
+    config_schema: dict[str, Any]
+
 
 class ConnectorRegistry:
     """In-memory registry for connector implementations."""
@@ -30,7 +67,11 @@ class ConnectorRegistry:
         self._registry: dict[str, type[Connector]] = {}
 
     def register(self, connector: type[Connector]) -> None:
-        self._registry[connector.__name__] = connector
+        identifier = connector.name
+        if identifier in self._registry:
+            raise ValueError(f"Connector '{identifier}' is already registered")
+
+        self._registry[identifier] = connector
 
     def get(self, name: str) -> type[Connector]:
         try:
@@ -40,6 +81,17 @@ class ConnectorRegistry:
 
     def list(self) -> list[str]:
         return sorted(self._registry.keys())
+
+    def describe(self) -> list[ConnectorDefinition]:
+        """Return metadata for all registered connectors."""
+
+        return [self._registry[name].to_definition() for name in self.list()]
+
+    def create(self, name: str, **config: Any) -> Connector:
+        """Instantiate a registered connector with the provided configuration."""
+
+        connector_cls = self.get(name)
+        return connector_cls(**config)
 
 
 registry = ConnectorRegistry()

@@ -1,6 +1,6 @@
 # OpenFuse Web Dashboard
 
-The web dashboard provides observability and configuration tooling for OpenFuse operators. It is built with Next.js (App Router) and Tailwind-inspired utility classes for rapid iteration.
+The web dashboard provides observability and configuration tooling for OpenFuse operators. It is built with Next.js (App Router) and Tailwind-inspired utility classes for rapid iteration. The landing page hydrates itself with live data from the API by calling the connector registry endpoint exposed at `${NEXT_PUBLIC_API_URL}/api/v1/connectors`.
 
 ## Commands
 

@@ -2,8 +2,9 @@
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import connectors, health
+from app.api.v1.endpoints import connectors, health, pipelines
 
 router = APIRouter(prefix="/v1")
 router.include_router(health.router)
 router.include_router(connectors.router)
+router.include_router(pipelines.router)

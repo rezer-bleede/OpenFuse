@@ -1,0 +1,100 @@
+"""Database models for OpenFuse."""
+
+from datetime import datetime
+from enum import Enum
+from typing import Any
+
+from sqlmodel import Field, SQLModel
+
+
+class PipelineStatus(str, Enum):
+    """Pipeline lifecycle states."""
+
+    DRAFT = "draft"
+    ACTIVE = "active"
+    PAUSED = "paused"
+    FAILED = "failed"
+    DELETED = "deleted"
+
+
+class ReplicationMode(str, Enum):
+    """Data replication modes."""
+
+    FULL_TABLE = "full_table"
+    INCREMENTAL_KEY = "incremental_key"
+    LOG_BASED = "log_based"
+
+
+class JobStatus(str, Enum):
+    """Pipeline job execution status."""
+
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+class PipelineBase(SQLModel):
+    """Base pipeline model."""
+
+    name: str = Field(max_length=255, description="Pipeline display name")
+    description: str | None = Field(default=None, max_length=1000)
+    source_connector: str = Field(max_length=100, description="Source connector name")
+    source_config: dict[str, Any] = Field(default_factory=dict, description="Source connector configuration")
+    destination_connector: str = Field(max_length=100, description="Destination connector name")
+    destination_config: dict[str, Any] = Field(default_factory=dict, description="Destination connector configuration")
+    schedule_cron: str | None = Field(default=None, description="Cron expression for scheduling")
+    status: PipelineStatus = Field(default=PipelineStatus.DRAFT)
+    replication_mode: ReplicationMode = Field(default=ReplicationMode.FULL_TABLE)
+    incremental_key: str | None = Field(default=None, description="Column for incremental replication")
+    batch_size: int = Field(default=10000, description="Rows per batch")
+
+
+class Pipeline(PipelineBase, table=True):
+    """Pipeline table."""
+
+    __tablename__ = "pipelines"
+
+    id: int | None = Field(default=None, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow, sa_column_kwargs={"onupdate": datetime.utcnow})
+
+
+class JobBase(SQLModel):
+    """Base job model."""
+
+    pipeline_id: int = Field(foreign_key="pipelines.id")
+    status: JobStatus = Field(default=JobStatus.PENDING)
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    rows_synced: int = 0
+    error_message: str | None = None
+
+
+class Job(JobBase, table=True):
+    """Job execution table."""
+
+    __tablename__ = "jobs"
+
+    id: int | None = Field(default=None, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ConnectorInstanceBase(SQLModel):
+    """Saved connector configuration."""
+
+    name: str = Field(max_length=255, description="Instance display name")
+    connector_type: str = Field(max_length=100, description="Connector type (e.g., postgres, snowflake)")
+    config: dict[str, Any] = Field(default_factory=dict, description="Encrypted connector configuration")
+    is_active: bool = Field(default=True)
+
+
+class ConnectorInstance(ConnectorInstanceBase, table=True):
+    """Saved connector instances table."""
+
+    __tablename__ = "connector_instances"
+
+    id: int | None = Field(default=None, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow, sa_column_kwargs={"onupdate": datetime.utcnow})

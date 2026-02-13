@@ -33,7 +33,7 @@ class Connector(ABC):
         """Validate connector configuration."""
 
     @abstractmethod
-    async def run(self) -> None:
+    async def run(self) -> dict[str, Any] | None:
         """Execute the connector pipeline."""
 
     @classmethod

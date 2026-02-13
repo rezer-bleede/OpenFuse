@@ -1,5 +1,7 @@
 """Example connector demonstrating the extension API."""
 
+from typing import Any
+
 from app.services.connectors import Connector, registry
 
 
@@ -33,10 +35,10 @@ class ExampleConnector(Connector):
         if "endpoint" not in self.config:
             raise ValueError("`endpoint` configuration is required")
 
-    async def run(self) -> None:
+    async def run(self) -> dict[str, Any] | None:
         self.validate()
         # Placeholder for I/O operations
-        return None
+        return {"status": "completed"}
 
 
 registry.register(ExampleConnector)

@@ -30,7 +30,6 @@ from . import gcs as _gcs  # noqa: F401
 from . import intercom as _intercom  # noqa: F401
 from . import quickbooks as _quickbooks  # noqa: F401
 from . import twilio as _twilio  # noqa: F401
-from . import airtable as _airtable  # noqa: F401
 from . import asana as _asana  # noqa: F401
 from . import jira as _jira  # noqa: F401
 from . import facebook_ads as _facebook_ads  # noqa: F401

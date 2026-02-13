@@ -1,5 +1,7 @@
 """Entry point for the OpenFuse FastAPI application."""
 
+from typing import Dict
+
 from fastapi import FastAPI
 
 from app.api.v1 import api_router
@@ -19,7 +21,7 @@ def create_application() -> FastAPI:
     app.include_router(api_router, prefix=settings.api_prefix)
 
     @app.get("/health", tags=["system"])
-    async def healthcheck() -> dict[str, str]:
+    async def healthcheck() -> Dict[str, str]:
         """Liveness probe for the service."""
         return {"status": "ok"}
 

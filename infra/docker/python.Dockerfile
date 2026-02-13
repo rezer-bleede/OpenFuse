@@ -10,7 +10,7 @@ RUN pip install "poetry==${POETRY_VERSION}"
 
 WORKDIR /app
 COPY apps/api/pyproject.toml /app/apps/api/pyproject.toml
-RUN cd /app/apps/api && poetry config virtualenvs.create false && poetry install --no-root
+RUN cd /app/apps/api && POETRY_VIRTUALENVS_CREATE=false poetry install --no-root
 
 COPY apps/api /app/apps/api
 

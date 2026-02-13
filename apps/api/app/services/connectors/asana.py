@@ -25,7 +25,7 @@ class AsanaSourceConnector(Connector):
                 "type": "array",
                 "title": "Project IDs",
                 "items": {"type": "string"},
- "Specific project IDs                "description": (empty = all)",
+                "description": "Specific project IDs (empty = all)",
             },
             "objects": {
                 "type": "array",

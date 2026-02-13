@@ -1,7 +1,7 @@
 """Pydantic schemas for pipeline API endpoints."""
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -12,12 +12,12 @@ class PipelineBase(BaseModel):
     """Base pipeline schema."""
 
     name: str = Field(max_length=255)
-    description: str | None = None
+    description: Optional[str] = None
     source_connector: str
-    source_config: dict[str, Any] = {}
+    source_config: Dict[str, Any] = Field(default_factory=dict)
     destination_connector: str
-    destination_config: dict[str, Any] = {}
-    schedule_cron: str | None = None
+    destination_config: Dict[str, Any] = Field(default_factory=dict)
+    schedule_cron: Optional[str] = None
     replication_mode: ReplicationMode = ReplicationMode.FULL_TABLE
     incremental_key: str | None = None
     batch_size: int = 10000
@@ -31,14 +31,14 @@ class PipelineCreate(PipelineBase):
 class PipelineUpdate(BaseModel):
     """Schema for updating a pipeline."""
 
-    name: str | None = None
-    description: str | None = None
-    source_config: dict[str, Any] | None = None
-    destination_config: dict[str, Any] | None = None
-    schedule_cron: str | None = None
-    status: PipelineStatus | None = None
-    replication_mode: ReplicationMode | None = None
-    incremental_key: str | None = None
+    name: Optional[str] = None
+    description: Optional[str] = None
+    source_config: Optional[Dict[str, Any]] = None
+    destination_config: Optional[Dict[str, Any]] = None
+    schedule_cron: Optional[str] = None
+    status: Optional[PipelineStatus] = None
+    replication_mode: Optional[ReplicationMode] = None
+    incremental_key: Optional[str] = None
     batch_size: int | None = None
 
 
@@ -57,7 +57,7 @@ class PipelineResponse(PipelineBase):
 class PipelineListResponse(BaseModel):
     """List of pipelines."""
 
-    pipelines: list[PipelineResponse]
+    pipelines: List[PipelineResponse]
     total: int
 
 
@@ -73,9 +73,9 @@ class JobResponse(JobBase):
 
     id: int
     rows_synced: int
-    error_message: str | None
-    started_at: datetime | None
-    completed_at: datetime | None
+    error_message: Optional[str]
+    started_at: Optional[datetime]
+    completed_at: Optional[datetime]
     created_at: datetime
 
     class Config:
@@ -85,7 +85,7 @@ class JobResponse(JobBase):
 class JobListResponse(BaseModel):
     """List of jobs."""
 
-    jobs: list[JobResponse]
+    jobs: List[JobResponse]
     total: int
 
 
@@ -93,12 +93,12 @@ class PipelineRunRequest(BaseModel):
     """Request to run a pipeline manually."""
 
     backfill: bool = False
-    start_date: datetime | None = None
-    end_date: datetime | None = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
 
 
 class PipelineValidateRequest(BaseModel):
     """Request to validate a pipeline configuration."""
 
-    source_config: dict[str, Any]
-    destination_config: dict[str, Any]
+    source_config: Dict[str, Any]
+    destination_config: Dict[str, Any]

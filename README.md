@@ -43,7 +43,7 @@ Each area is designed for isolation and scalability so the community edition and
 
 ### Smoke testing the stack
 
-After the containers are running you can confirm the MVP is healthy:
+After containers are running you can confirm the MVP is healthy:
 
 - `GET http://localhost:8000/api/v1/health` returns the API liveness probe.
 - `GET http://localhost:8000/api/v1/connectors` lists every connector registered in the service registry.
@@ -55,11 +55,70 @@ After the containers are running you can confirm the MVP is healthy:
     }
   }
   ```
-  to validate the example connector configuration without executing a pipeline.
+  to validate an example connector configuration without executing a pipeline.
 
 The web dashboard automatically reads from `NEXT_PUBLIC_API_URL` and renders the list of connectors exposed by the API. If the
 variable is unset or the registry cannot be reached, the dashboard now falls back to a curated offline catalogue so local
 development continues to work without noisy connection errors.
+
+## Testing
+
+### Frontend Tests
+
+```bash
+# Run all tests
+cd apps/web
+npm test
+
+# Run in watch mode
+npm run test:watch
+
+# Run with coverage
+npm run test:coverage
+
+# Run E2E tests
+npm run test:e2e
+```
+
+### Backend Tests
+
+```bash
+# Run all tests
+cd apps/api
+poetry run pytest
+
+# Run with coverage
+poetry run pytest --cov=app --cov-report=html
+
+# Run specific test file
+poetry run pytest tests/test_pipelines.py
+```
+
+### Docker Environment Testing
+
+```bash
+# Run tests in Docker
+docker compose -f infra/docker/docker-compose.yml run --rm web npm test
+docker compose -f infra/docker/docker-compose.yml run --rm api poetry run pytest
+```
+
+### Coverage Reports
+
+- Frontend: `apps/web/coverage/index.html`
+- Backend: `apps/api/htmlcov/index.html`
+
+Coverage goals: **80%+ overall** (currently: 5.4%)
+
+See [`docs/testing.md`](docs/testing.md) for comprehensive testing documentation.
+
+### CI/CD
+
+Tests run automatically on:
+- Every push to `main` or `develop`
+- Every pull request
+- Manual trigger via GitHub Actions
+
+See `.github/workflows/test.yml` for CI/CD configuration.
 
 ### Testing
 

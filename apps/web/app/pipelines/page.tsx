@@ -1,7 +1,19 @@
-import { loadConnectors, type Connector } from "./lib/connectors";
+"use client";
 
-export default async function PipelinesPage() {
-  const connectors = await loadConnectors();
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { loadConnectors, type Connector } from "../lib/connectors";
+
+export default function PipelinesPage() {
+  const router = useRouter();
+  const [connectors, setConnectors] = useState<Connector[]>([]);
+  const [selectedSource, setSelectedSource] = useState<Connector | null>(null);
+  const [selectedDest, setSelectedDest] = useState<Connector | null>(null);
+
+  useEffect(() => {
+    loadConnectors().then(setConnectors);
+  }, []);
+
   const sourceConnectors = connectors.filter(c => 
     !c.name.includes("destination") && c.name !== "example"
   );
@@ -26,11 +38,22 @@ export default async function PipelinesPage() {
             <h4 className="text-lg font-semibold text-slate-100 mb-4">Source</h4>
             <div className="space-y-2">
               {sourceConnectors.slice(0, 8).map((connector) => (
-                <div key={connector.name} className="flex items-center gap-3 p-2 rounded hover:bg-slate-800/50 cursor-pointer transition-colors">
+                <div 
+                  key={connector.name} 
+                  onClick={() => setSelectedSource(connector)}
+                  className={`flex items-center gap-3 p-2 rounded cursor-pointer transition-colors ${
+                    selectedSource?.name === connector.name 
+                      ? "bg-blue-500/20 border border-blue-500/30" 
+                      : "hover:bg-slate-800/50"
+                  }`}
+                >
                   <div className="w-8 h-8 rounded bg-blue-500/20 flex items-center justify-center text-blue-400 text-sm font-medium">
                     {connector.title.charAt(0)}
                   </div>
                   <span className="text-sm text-slate-300">{connector.title}</span>
+                  {selectedSource?.name === connector.name && (
+                    <span className="ml-auto text-blue-400">✓</span>
+                  )}
                 </div>
               ))}
             </div>
@@ -40,16 +63,38 @@ export default async function PipelinesPage() {
             <h4 className="text-lg font-semibold text-slate-100 mb-4">Destination</h4>
             <div className="space-y-2">
               {destConnectors.slice(0, 8).map((connector) => (
-                <div key={connector.name} className="flex items-center gap-3 p-2 rounded hover:bg-slate-800/50 cursor-pointer transition-colors">
+                <div 
+                  key={connector.name} 
+                  onClick={() => setSelectedDest(connector)}
+                  className={`flex items-center gap-3 p-2 rounded cursor-pointer transition-colors ${
+                    selectedDest?.name === connector.name 
+                      ? "bg-emerald-500/20 border border-emerald-500/30" 
+                      : "hover:bg-slate-800/50"
+                  }`}
+                >
                   <div className="w-8 h-8 rounded bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-sm font-medium">
                     {connector.title.charAt(0)}
                   </div>
                   <span className="text-sm text-slate-300">{connector.title}</span>
+                  {selectedDest?.name === connector.name && (
+                    <span className="ml-auto text-emerald-400">✓</span>
+                  )}
                 </div>
               ))}
             </div>
           </div>
         </div>
+
+        {selectedSource && selectedDest && (
+          <div className="flex justify-end">
+            <button 
+              onClick={() => router.push(`/pipelines/new?source=${selectedSource.name}&dest=${selectedDest.name}`)}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors"
+            >
+              Continue →
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="space-y-4">

@@ -1,0 +1,225 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test-api:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: openfuse_test
+          POSTGRES_USER: openfuse
+          POSTGRES_PASSWORD: openfuse
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      
+      - name: Install dependencies
+        working-directory: ./apps/api
+        run: poetry install --with dev
+      
+      - name: Run tests with coverage
+        working-directory: ./apps/api
+        env:
+          DATABASE_URL: postgresql://openfuse:openfuse@localhost:5432/openfuse_test
+          OPENFUSE_ENVIRONMENT: test
+        run: |
+          poetry run pytest --cov=app --cov-report=xml --cov-report=term
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./apps/api/coverage.xml
+          flags: api
+          fail_ci_if_error: false
+
+  test-web:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      
+      - name: Install dependencies
+        working-directory: ./apps/web
+        run: npm install
+      
+      - name: Run tests with coverage
+        working-directory: ./apps/web
+        run: npm run test -- --coverage
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./apps/web/coverage/coverage-final.json
+          flags: web
+          fail_ci_if_error: false
+
+  test-e2e:
+    runs-on: ubuntu-latest
+    needs: [test-api, test-web]
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: openfuse_test
+          POSTGRES_USER: openfuse
+          POSTGRES_PASSWORD: openfuse
+        ports:
+          - 5432:5432
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      
+      - name: Install dependencies
+        working-directory: ./apps/web
+        run: npm install
+      
+      - name: Install dependencies (API)
+        working-directory: ./apps/api
+        run: |
+          pip install fastapi uvicorn sqlmodel psycopg2-binary
+      
+      - name: Set up test database
+        working-directory: ./apps/api
+        env:
+          DATABASE_URL: postgresql://openfuse:openfuse@localhost:5432/openfuse_test
+        run: |
+          python -c "
+          from app.db import create_db_and_tables
+          create_db_and_tables()
+          "
+      
+      - name: Run API server
+        working-directory: ./apps/api
+        env:
+          DATABASE_URL: postgresql://openfuse:openfuse@localhost:5432/openfuse_test
+          PYTHONPATH: ${{ github.workspace }}/apps/api
+        run: |
+          uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          sleep 10 &
+          echo "API server started"
+      
+      - name: Run E2E tests
+        working-directory: ./apps/web
+        env:
+          API_URL: http://localhost:8000
+        run: npm run test:e2e
+      
+      - name: Upload E2E coverage to Codecov
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          file: ./apps/web/coverage/coverage-final.json
+          flags: e2e
+          fail_ci_if_error: false
+
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        working-directory: ./apps/web
+        run: npm install
+      
+      - name: Run ESLint
+        working-directory: ./apps/web
+        run: npm run lint
+
+  type-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        working-directory: ./apps/web
+        run: npm install
+      
+      - name: Run TypeScript type check
+        working-directory: ./apps/web
+        run: npx tsc --noEmit
+
+  python-lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      
+      - name: Install dependencies
+        working-directory: ./apps/api
+        run: poetry install --with dev
+      
+      - name: Run Ruff linter
+        working-directory: ./apps/api
+        run: |
+          poetry run ruff check app/

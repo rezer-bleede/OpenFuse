@@ -4,7 +4,21 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Literal
+
+Capability = Literal["source", "destination"]
+
+
+def derive_capabilities(tags: list[str]) -> list[Capability]:
+    """Infer connector capabilities from tags."""
+
+    capabilities: list[Capability] = []
+    lowered_tags = {tag.lower() for tag in tags}
+    if "source" in lowered_tags:
+        capabilities.append("source")
+    if "destination" in lowered_tags:
+        capabilities.append("destination")
+    return capabilities
 
 
 class Connector(ABC):

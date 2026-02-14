@@ -1,9 +1,8 @@
 """Community workflow task definitions."""
 
 import logging
+import asyncio
 from datetime import datetime
-
-from sqlalchemy import update
 
 from app.services.workflows.worker import celery_app
 from app.db import get_session
@@ -25,47 +24,60 @@ def run_pipeline_task(job_id: int) -> dict:
 
     session = next(get_session())
 
-    job = session.get(Job, job_id)
-    if not job:
-        logger.error(f"Job {job_id} not found")
-        return {"status": "error", "message": "Job not found"}
-
-    pipeline = session.get(Pipeline, job.pipeline_id)
-    if not pipeline:
-        logger.error(f"Pipeline {job.pipeline_id} not found for job {job_id}")
-        job.status = JobStatus.FAILED
-        job.error_message = "Pipeline not found"
-        session.commit()
-        return {"status": "error", "message": "Pipeline not found"}
-
-    job.status = JobStatus.RUNNING
-    job.started_at = datetime.utcnow()
-    session.commit()
-
     try:
-        from app.services.connectors import registry
+        job = session.get(Job, job_id)
+        if not job:
+            logger.error(f"Job {job_id} not found")
+            return {"status": "failed", "message": "Job not found", "job_id": job_id}
 
-        source = registry.create(pipeline.source_connector, **pipeline.source_config)
-        dest = registry.create(pipeline.destination_connector, **pipeline.destination_config)
+        pipeline = session.get(Pipeline, job.pipeline_id)
+        if not pipeline:
+            logger.error(f"Pipeline {job.pipeline_id} not found for job {job_id}")
+            job.status = JobStatus.FAILED
+            job.error_message = "Pipeline not found"
+            job.completed_at = datetime.utcnow()
+            session.commit()
+            return {"status": "failed", "message": "Pipeline not found", "job_id": job_id}
 
-        import asyncio
-        asyncio.run(source.run())
+        job.status = JobStatus.RUNNING
+        job.started_at = datetime.utcnow()
+        session.commit()
 
-        job.status = JobStatus.COMPLETED
-        job.completed_at = datetime.utcnow()
-        job.rows_synced = 0
+        try:
+            from app.services.connectors import registry
 
-    except Exception as e:
-        logger.exception(f"Pipeline {pipeline.id} failed")
-        job.status = JobStatus.FAILED
-        job.completed_at = datetime.utcnow()
-        job.error_message = str(e)
+            source = registry.create(pipeline.source_connector, **pipeline.source_config)
+            destination = registry.create(
+                pipeline.destination_connector, **pipeline.destination_config
+            )
 
-    session.commit()
+            source_result = asyncio.run(source.run()) or {}
+            destination_result = asyncio.run(destination.run()) or {}
 
-    return {
-        "status": job.status.value,
-        "job_id": job_id,
-        "pipeline_id": pipeline.id,
-        "rows_synced": job.rows_synced,
-    }
+            rows_synced = (
+                source_result.get("rows_extracted")
+                or destination_result.get("rows_loaded")
+                or 0
+            )
+
+            job.status = JobStatus.COMPLETED
+            job.completed_at = datetime.utcnow()
+            job.rows_synced = int(rows_synced)
+            job.error_message = None
+        except Exception as exc:
+            logger.exception(f"Pipeline {pipeline.id} failed")
+            job.status = JobStatus.FAILED
+            job.completed_at = datetime.utcnow()
+            job.error_message = str(exc)
+
+        session.commit()
+
+        return {
+            "status": job.status.value,
+            "job_id": job_id,
+            "pipeline_id": pipeline.id,
+            "rows_synced": job.rows_synced,
+            "error_message": job.error_message,
+        }
+    finally:
+        session.close()

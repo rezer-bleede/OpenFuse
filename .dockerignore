@@ -1,0 +1,24 @@
+.git
+.github
+
+# JavaScript / Next.js local artifacts
+**/node_modules
+**/.next
+**/.pnpm-store
+**/coverage
+**/dist
+**/build
+
+# Python local artifacts
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/.venv
+**/venv
+
+# OS / editor noise
+**/.DS_Store
+**/.idea
+**/.vscode

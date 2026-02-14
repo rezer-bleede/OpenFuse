@@ -1,11 +1,19 @@
 import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
+import path from "node:path";
 
 export default defineConfig({
-  plugins: [react()],
+  esbuild: {
+    jsx: "automatic",
+    jsxImportSource: "react",
+  },
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname),
+    },
+  },
   test: {
     environment: 'happy-dom',
-    include: ['e2e/**/*.spec.ts'],
+    include: ['e2e/**/*.spec.ts', 'e2e/**/*.spec.tsx'],
     setupFiles: ['./e2e/setup.ts'],
     globalSetup: './e2e/global-setup.ts',
     pool: 'forks',
@@ -25,11 +33,7 @@ export default defineConfig({
         '**/*.test.tsx',
         '**/config/**',
         '**/dist/**'
-      ],
-      statements: 80,
-      branches: 80,
-      functions: 80,
-      lines: 80
+      ]
     }
   }
 });

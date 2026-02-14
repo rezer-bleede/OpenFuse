@@ -4,7 +4,7 @@ Community connectors live here. Enterprise connectors can be loaded dynamically 
 without modifying this package.
 """
 
-from .base import Connector, ConnectorDefinition, ConnectorRegistry, registry
+from .base import Connector, ConnectorDefinition, ConnectorRegistry, derive_capabilities, registry
 
 # Register built-in community connectors.
 from . import example as _example  # noqa: F401
@@ -23,6 +23,7 @@ from . import shopify as _shopify  # noqa: F401
 from . import slack as _slack  # noqa: F401
 from . import sqlserver as _sqlserver  # noqa: F401
 from . import google_sheets as _google_sheets  # noqa: F401
+from . import airtable as _airtable  # noqa: F401
 from . import zendesk as _zendesk  # noqa: F401
 from . import mailchimp as _mailchimp  # noqa: F401
 from . import redshift as _redshift  # noqa: F401
@@ -34,4 +35,4 @@ from . import asana as _asana  # noqa: F401
 from . import jira as _jira  # noqa: F401
 from . import facebook_ads as _facebook_ads  # noqa: F401
 
-__all__ = ["Connector", "ConnectorDefinition", "ConnectorRegistry", "registry"]
+__all__ = ["Connector", "ConnectorDefinition", "ConnectorRegistry", "derive_capabilities", "registry"]

@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Literal
 
 from pydantic import BaseModel, Field
 
-from app.services.connectors import ConnectorDefinition
+from app.services.connectors import ConnectorDefinition, derive_capabilities
+
+ConnectorCapability = Literal["source", "destination"]
 
 
 class ConnectorBase(BaseModel):
@@ -16,6 +18,7 @@ class ConnectorBase(BaseModel):
     title: str = Field(..., description="Display name presented in UIs")
     description: str = Field(..., description="Short summary of the connector")
     tags: List[str] = Field(default_factory=list, description="Free-form labels for grouping")
+    capabilities: List[ConnectorCapability] = Field(default_factory=list, description="Connector roles")
 
     @classmethod
     def from_definition(cls, definition: ConnectorDefinition) -> "ConnectorBase":
@@ -24,6 +27,7 @@ class ConnectorBase(BaseModel):
             title=definition.title,
             description=definition.description,
             tags=definition.tags,
+            capabilities=derive_capabilities(definition.tags),
         )
 
 
@@ -39,6 +43,7 @@ class ConnectorDetailResponse(ConnectorBase):
             title=definition.title,
             description=definition.description,
             tags=definition.tags,
+            capabilities=derive_capabilities(definition.tags),
             config_schema=definition.config_schema,
         )
 

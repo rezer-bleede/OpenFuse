@@ -1,23 +1,32 @@
 """REST endpoints for connector metadata and validation."""
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 
 from app.api.v1.schemas.connectors import (
+    ConnectorCapability,
     ConnectorDetailResponse,
     ConnectorListResponse,
     ConnectorValidationRequest,
     ConnectorValidationResponse,
 )
-from app.services.connectors import registry
+from app.services.connectors import derive_capabilities, registry
 
 router = APIRouter(prefix="/connectors", tags=["connectors"])
 
 
 @router.get("", response_model=ConnectorListResponse)
-async def list_connectors() -> ConnectorListResponse:
+async def list_connectors(
+    capability: ConnectorCapability | None = Query(default=None, description="Filter by connector capability"),
+) -> ConnectorListResponse:
     """Return all registered connectors and their metadata."""
 
     definitions = registry.describe()
+    if capability is not None:
+        definitions = [
+            definition
+            for definition in definitions
+            if capability in derive_capabilities(definition.tags)
+        ]
     return ConnectorListResponse.from_definitions(definitions)
 
 

@@ -1,9 +1,6 @@
-import { beforeAll, afterAll } from 'vitest';
-
-beforeAll(async () => {
-  console.log('Starting E2E test environment...');
-});
-
-afterAll(async () => {
-  console.log('Cleaning up E2E test environment...');
-});
+export default async function globalSetup() {
+  // Reserved for future end-to-end environment bootstrapping.
+  return () => {
+    // Reserved for future teardown.
+  };
+}

@@ -4,7 +4,6 @@ import {
   defaultConnectors,
   getApiUrl,
   loadConnectors,
-  type Connector,
   type FetchLike,
 } from "../app/lib/connectors";
 
@@ -28,12 +27,20 @@ describe("loadConnectors", () => {
 
   it("returns remote connectors when the request succeeds", async () => {
     process.env.NEXT_PUBLIC_API_URL = "https://registry.openfuse.dev";
-    const remoteConnectors: Connector[] = [
+    const remoteConnectors = [
       {
         name: "github",
         title: "GitHub",
         description: "Sync repositories and webhook deliveries.",
-        tags: ["developer", "source-control"],
+        tags: ["developer", "source"],
+        capabilities: ["source"],
+        config_schema: {
+          type: "object",
+          properties: {
+            token: { type: "string", title: "Token", format: "password" },
+          },
+          required: ["token"],
+        },
       },
     ];
 
@@ -48,6 +55,39 @@ describe("loadConnectors", () => {
 
     expect(fetchSpy).toHaveBeenCalledWith("https://registry.openfuse.dev/api/v1/connectors", { cache: "no-store" });
     expect(connectors).toEqual(remoteConnectors);
+  });
+
+  it("supports capability filtering", async () => {
+    process.env.NEXT_PUBLIC_API_URL = "https://registry.openfuse.dev";
+    const fetchSpy = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      json: async () => ({
+        connectors: [
+          {
+            name: "github",
+            title: "GitHub",
+            description: "GitHub source",
+            tags: ["source"],
+            capabilities: ["source"],
+            config_schema: { type: "object", properties: {}, required: [] },
+          },
+          {
+            name: "snowflake",
+            title: "Snowflake",
+            description: "Snowflake destination",
+            tags: ["destination"],
+            capabilities: ["destination"],
+            config_schema: { type: "object", properties: {}, required: [] },
+          },
+        ],
+      }),
+    })) as unknown as FetchLike;
+
+    const connectors = await loadConnectors(fetchSpy, "destination");
+    expect(connectors).toHaveLength(1);
+    expect(connectors[0].name).toBe("snowflake");
   });
 
   it("falls back to bundled connectors when the response is not ok", async () => {

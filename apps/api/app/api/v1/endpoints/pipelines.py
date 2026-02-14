@@ -16,9 +16,28 @@ from app.api.v1.schemas.pipelines import (
 )
 from app.db import get_session
 from app.db.models import Pipeline, Job, JobStatus, PipelineStatus
-from app.services.connectors import registry
+from app.services.connectors import derive_capabilities, registry
 
 router = APIRouter(prefix="/pipelines", tags=["pipelines"])
+
+
+def _require_connector_capability(name: str, required: str) -> None:
+    """Ensure a connector supports the required role."""
+
+    try:
+        connector_cls = registry.get(name)
+    except LookupError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Connector '{name}' not found",
+        )
+
+    capabilities = derive_capabilities(list(getattr(connector_cls, "tags", [])))
+    if required not in capabilities:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Connector '{name}' does not support '{required}' capability",
+        )
 
 
 @router.get("", response_model=PipelineListResponse)
@@ -53,21 +72,8 @@ async def create_pipeline(
 ) -> PipelineResponse:
     """Create a new pipeline."""
 
-    try:
-        registry.get(pipeline.source_connector)
-    except LookupError:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Source connector '{pipeline.source_connector}' not found",
-        )
-
-    try:
-        registry.get(pipeline.destination_connector)
-    except LookupError:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Destination connector '{pipeline.destination_connector}' not found",
-        )
+    _require_connector_capability(pipeline.source_connector, "source")
+    _require_connector_capability(pipeline.destination_connector, "destination")
 
     db_pipeline = Pipeline(
         name=pipeline.name,
@@ -156,7 +162,7 @@ async def delete_pipeline(
 @router.post("/{pipeline_id}/run", response_model=JobResponse)
 async def run_pipeline(
     pipeline_id: int,
-    request: PipelineRunRequest,
+    request: PipelineRunRequest | None = None,
     session=Depends(get_session),
 ) -> JobResponse:
     """Trigger a pipeline run."""
@@ -183,7 +189,12 @@ async def run_pipeline(
     session.refresh(job)
 
     from app.services.workflows.tasks import run_pipeline_task
-    run_pipeline_task.delay(job.id)
+    try:
+        run_pipeline_task.delay(job.id)
+    except Exception:
+        # Keep API responsive in environments where the broker is unavailable.
+        # The job remains pending and can be retried by a worker later.
+        pass
 
     return JobResponse.model_validate(job)
 
